@@ -7,8 +7,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const API_URL = 'https://api.anthropic.com/v1/messages';
-const API_VERSION = '2023-06-01';
+const API_BASE = process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com/v1';
+const API_URL = API_BASE.replace(/\/$/, '') + '/chat/completions';
 
 function loadPrompts() {
   const promptsPath = path.join(__dirname, 'prompts.json');
@@ -27,14 +27,16 @@ async function callAPI(prompt, systemPrompt, model, apiKey) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': API_VERSION,
+      'Authorization': `Bearer ${apiKey}`,
+      'User-Agent': 'claude-code/0.1.0',
     },
     body: JSON.stringify({
       model,
       max_tokens: 4096,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: prompt }],
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: prompt },
+      ],
     }),
   });
   if (!response.ok) {
@@ -43,8 +45,8 @@ async function callAPI(prompt, systemPrompt, model, apiKey) {
   }
   const data = await response.json();
   return {
-    tokens: data.usage.output_tokens,
-    content: data.content[0].text,
+    tokens: data.usage.completion_tokens,
+    content: data.choices[0].message.content,
   };
 }
 
@@ -136,7 +138,7 @@ async function main() {
   const levelIdx = args.indexOf('--level');
   const level = levelIdx !== -1 ? args[levelIdx + 1] : 'full';
   const modelIdx = args.indexOf('--model');
-  const model = modelIdx !== -1 ? args[modelIdx + 1] : 'claude-sonnet-4-7';
+  const model = modelIdx !== -1 ? args[modelIdx + 1] : 'kimi-for-coding';
   const dryRun = args.includes('--dry-run');
 
   if (!['full', 'lite'].includes(level)) {
