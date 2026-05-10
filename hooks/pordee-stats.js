@@ -10,7 +10,8 @@ const path = require('path');
 const os = require('os');
 const { getState } = require('./pordee-config');
 
-// Approximate Anthropic public output-token pricing, USD per million.
+// Approximate output-token pricing, USD per million.
+// Anthropic + Kimi models. Update when pricing changes.
 const MODEL_OUTPUT_PRICE_PER_M = [
   ['claude-opus-4', 75.00],
   ['claude-sonnet-4', 15.00],
@@ -18,6 +19,8 @@ const MODEL_OUTPUT_PRICE_PER_M = [
   ['claude-3-5-sonnet', 15.00],
   ['claude-3-5-haiku', 4.00],
   ['claude-3-opus', 75.00],
+  ['kimi-for-coding', 15.00],
+  ['kimi-k2-5', 15.00],
 ];
 
 function loadCompression() {
