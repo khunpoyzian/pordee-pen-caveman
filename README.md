@@ -301,148 +301,83 @@ node benchmarks/run.js --dry-run --level full
 
 # Extras: lang-auto-switch hook (pordee-pen-caveman)
 
-> พิมไทย → ตอบไทยกระชับ. Type English → terse English reply. Auto. No config.
-
-สำหรับคนที่ใช้ภาษาอังกฤษเป็นหลัก แต่บางทีก็อยากพิมภาษาไทย หรือนึกคำอังกฤษไม่ออก —
-hook ตัวนี้ detect ภาษาจาก prompt แล้วสลับ mode ให้อัตโนมัติ ไม่ต้องพิมคำสั่งเพิ่ม
-
-*For bilingual users who mostly type English but sometimes switch to Thai.*
+> พิมภาษาไทย → Claude ตอบไทยกระชับ  
+> Type English → Claude replies terse English  
+> สลับอัตโนมัติ — ไม่ต้องพิมคำสั่งอะไรเพิ่ม
 
 ---
 
-## ทำอะไร / What it does
+## ติดตั้ง / Install (3 ขั้นตอน)
 
-Hook ตรวจ prompt ทุก turn:
+### ขั้นตอนที่ 1 — ดาวน์โหลด
 
-- **Thai ≥15% ของ alpha chars** → inject [pordee](https://github.com/kerlos/pordee) full rules — ตอบไทยกระชับ ตัดคำสุภาพ/ลังเล
-- **English** → inject [caveman](https://github.com/JuliusBrussee/caveman) full rules — terse, no filler, fragments OK
-
-ทั้งสองโหมดเป็น **full** (ประหยัด token สูงสุด)
+กด **Code → Download ZIP** แล้ว unzip  
+หรือถ้ามี git:
 
 ```
-"แก้ bug นี้ให้หน่อย" → pordee full (ตอบไทย)
-"fix this bug"          → caveman full (terse English)
-"ช่วย debug นี้ด้วย"   → pordee full (Thai ≥15%)
+git clone https://github.com/khunpoyzian/pordee-pen-caveman.git
+cd pordee-pen-caveman
 ```
 
 ---
 
-## ติดตั้ง / Install
+### ขั้นตอนที่ 2 — รัน installer
 
-### 1. Copy hook
+ต้องมี [Node.js](https://nodejs.org) (version 18 ขึ้นไป) — ถ้าไม่มีให้ดาวน์โหลดก่อน
 
-**macOS / Linux**
-```bash
-mkdir -p ~/.claude/hooks
-cp hooks/lang-auto-switch.js ~/.claude/hooks/
+เปิด Terminal / PowerShell แล้วรัน:
+
+```
+node install.js
 ```
 
-**Windows (PowerShell)**
-```powershell
-New-Item -ItemType Directory -Force "$env:USERPROFILE\.claude\hooks"
-Copy-Item hooks\lang-auto-switch.js "$env:USERPROFILE\.claude\hooks\"
-```
-
-### 2. เพิ่มใน `~/.claude/settings.json`
-
-เปิด `~/.claude/settings.json` แล้วเพิ่ม hook ใน `UserPromptSubmit`:
-
-**macOS / Linux**
-```json
-{
-  "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node ~/.claude/hooks/lang-auto-switch.js",
-            "timeout": 5,
-            "statusMessage": "Detecting language..."
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-**Windows**
-```json
-{
-  "hooks": {
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"C:\\Program Files\\nodejs\\node.exe\" \"%USERPROFILE%\\.claude\\hooks\\lang-auto-switch.js\"",
-            "timeout": 5,
-            "statusMessage": "Detecting language..."
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-> ถ้ามี hook อื่นอยู่แล้ว ให้เพิ่ม `lang-auto-switch` เป็นตัว **แรก** ใน hooks array ของ `UserPromptSubmit`
-
-### 3. (ถ้าใช้ caveman plugin) ปิด auto-activate
-
-caveman plugin activate ทุก session start โดย default. ปิดได้ด้วย:
-
-**macOS / Linux:** `~/.config/caveman/config.json`
-**Windows:** `%APPDATA%\caveman\config.json`
-
-```json
-{ "defaultMode": "off" }
-```
-
-ไม่งั้น caveman จะ inject rules ทับทุก session start แม้จะพิมไทย
+installer จะ:
+- copy hook ไปที่ `~/.claude/hooks/`
+- เพิ่ม hook เข้า `~/.claude/settings.json` ให้อัตโนมัติ
+- ตั้งค่า caveman plugin ให้ทำงานร่วมกันได้ (ถ้ามี)
 
 ---
 
-## Manual override
+### ขั้นตอนที่ 3 — restart Claude Code
 
-ถ้าอยากบังคับ mode โดยไม่ให้ auto-switch ทำงาน:
+ปิดแล้วเปิด Claude Code ใหม่ — เสร็จแล้ว
+
+---
+
+## ทดสอบ
+
+ลองพิมภาษาไทย → Claude จะตอบไทยกระชับ ไม่มีคำสุภาพ ไม่ลังเล  
+ลองพิมภาษาอังกฤษ → Claude จะตอบอังกฤษกระชับ ตัด filler ออก
+
+---
+
+## คำสั่ง manual (ถ้าอยากบังคับ)
 
 | พิม | ผล |
 |---|---|
-| `พอดี` | force pordee full |
-| `หยุดพอดี` / `พูดปกติ` | ปิด pordee |
-| `/caveman full` | force caveman full |
-| `stop caveman` / `normal mode` | ปิด caveman |
-
-Auto-switch จะ skip บน prompt เหล่านี้แล้วให้ pordee/caveman plugin จัดการเอง
+| `พอดี` | บังคับ Thai mode |
+| `หยุดพอดี` | ปิด Thai mode |
+| `/caveman full` | บังคับ English mode |
+| `stop caveman` | ปิด English mode |
 
 ---
 
-## ต้องการ dependency ไหม / Dependencies
+## ต้องการอะไรบ้าง
 
-| Dependency | จำเป็น? |
+| สิ่งที่ต้องมี | จำเป็น? |
 |---|---|
-| Node.js ≥18 | ✅ required |
-| [caveman plugin](https://github.com/JuliusBrussee/caveman) | optional — ถ้าอยากใช้ `/caveman` commands |
-| [pordee plugin](https://github.com/kerlos/pordee) | optional — ถ้าอยากใช้ `/pordee` commands |
-
-Hook ตัวนี้ทำงานได้ standalone โดยไม่ต้องติดตั้ง caveman หรือ pordee — rules ถูก inject ตรงจาก hook เอง
+| [Claude Code](https://claude.ai/code) | ✅ |
+| [Node.js 18+](https://nodejs.org) | ✅ |
+| [caveman plugin](https://github.com/JuliusBrussee/caveman) | optional (สำหรับ English mode ที่สมบูรณ์กว่า) |
+| [pordee plugin](https://github.com/kerlos/pordee) | optional (สำหรับ `/pordee` commands) |
 
 ---
 
-## Language detection
+## มันทำงานยังไง
 
-threshold: Thai ≥15% ของ alpha characters (หลัง strip code fences)
+Hook ตรวจ prompt ทุก turn: ถ้า Thai character ≥ 15% ของ text → inject pordee rules. ถ้าน้อยกว่า → ให้ caveman rules ทำงาน  
 
-```
-"debug นี้ให้ที"            → 2/7 alpha = 29% Thai → pordee
-"fix this debug นี้"        → 2/9 alpha = 22% Thai → pordee  
-"fix this bug (type ไทย)"   → 2/14 = 14% Thai → caveman
-"fix this bug entirely"     → 0% Thai → caveman
-```
-
-ปรับ threshold ได้ใน `lang-auto-switch.js` บรรทัด `>= 0.15`
+ไม่มี server ไม่มี API ไม่เก็บข้อมูล — ทุกอย่างรันใน local
 
 ---
 

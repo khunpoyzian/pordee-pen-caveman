@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // lang-auto-switch — UserPromptSubmit hook
-// Detects Thai vs English and injects pordee (full) or caveman (full) rules.
-// Manages both pordee state.json and caveman flag for consistent per-turn reinforcement.
-// Run ORDER: this hook first, then pordee-mode-tracker (optional), then caveman-mode-tracker (optional).
+// Detects Thai vs English. Thai → emits pordee full rules. English → sets caveman flag
+// so the caveman plugin's own hook emits the reminder (avoids duplicate injection).
+// Register ONLY this hook in UserPromptSubmit — do not also register caveman-mode-tracker
+// or pordee-mode-tracker, as those cause duplicate context emissions.
 
 const fs = require('fs');
 const path = require('path');
@@ -119,22 +120,30 @@ process.stdin.on('end', () => {
     }
 
     if (trigger === 'pordee-enable') {
+      // Manual /pordee — activate pordee, clear caveman flag, emit rules this turn
+      setPordeeState(true);
       setCavemanFlag(null);
+      emit(PORDEE_RULES);
       process.exit(0);
     }
 
     if (trigger === 'pordee-disable') {
+      // Manual หยุดพอดี / /pordee stop — clear both, no emit
+      setPordeeState(false);
       setCavemanFlag(null);
       process.exit(0);
     }
 
     if (trigger === 'caveman-enable') {
+      // Manual /caveman — caveman plugin handles flag + emit. Just clear pordee.
       setPordeeState(false);
       process.exit(0);
     }
 
     if (trigger === 'caveman-disable') {
+      // Manual stop caveman — clear both, no emit
       setPordeeState(false);
+      setCavemanFlag(null);
       process.exit(0);
     }
 
@@ -142,13 +151,14 @@ process.stdin.on('end', () => {
     const lang = detectLanguage(prompt);
 
     if (lang === 'thai') {
+      // Thai: emit pordee rules here. Clear caveman flag so caveman plugin stays silent.
       setPordeeState(true);
       setCavemanFlag(null);
       emit(PORDEE_RULES);
     } else {
+      // English: write caveman flag so caveman plugin emits the reminder. No emit here.
       setPordeeState(false);
       setCavemanFlag('full');
-      emit(CAVEMAN_RULES);
     }
   } catch (e) {}
   process.exit(0);
