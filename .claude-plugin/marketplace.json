@@ -1,14 +1,14 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "pordee",
-  "description": "Terse Thai+English communication mode for Claude Code. ~60-75% fewer output tokens.",
+  "name": "pordee-pen-caveman",
+  "description": "Auto Thai/English terse mode for Claude Code. Detects prompt language and switches between pordee (Thai) and caveman (English) per turn. ~60-75% fewer output tokens.",
   "owner": {
-    "name": "Vatunyoo Suwannapisit"
+    "name": "khunpoyzian"
   },
   "plugins": [
     {
-      "name": "pordee",
-      "description": "พอดี — พูดไทยสั้นๆ ตัด token ลง 60-75% โดยไม่เสีย technical accuracy",
+      "name": "pordee-pen-caveman",
+      "description": "พิมไทย → ตอบไทยกระชับ. Type English → terse English reply. Switches automatically per prompt.",
       "source": "./",
       "category": "productivity"
     }
