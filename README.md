@@ -1,71 +1,71 @@
 # pordee-pen-caveman
 
-> พิมไทย → ตอบไทยกระชับ &nbsp;·&nbsp; Type English → terse English reply &nbsp;·&nbsp; สลับอัตโนมัติ ไม่ต้องสั่ง
+> พิมไทย → ตอบไทยกระชับ &nbsp;·&nbsp; พิม English → ตอบ English สั้น &nbsp;·&nbsp; สลับอัตโนมัติ ไม่ต้องสั่ง
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%E2%89%A518-brightgreen.svg)](https://nodejs.org)
 [![Platform](https://img.shields.io/badge/Claude%20Code-plugin-7c3aed.svg)](https://claude.ai/code)
 
-A Claude Code plugin that fuses [**caveman**](https://github.com/JuliusBrussee/caveman) (English terse mode) with [**pordee**](https://github.com/kerlos/pordee) (Thai terse mode) and adds a `lang-auto-switch` hook that picks the right mode per prompt — no manual toggling.
+Plugin สำหรับ Claude Code ที่รวม [**caveman**](https://github.com/JuliusBrussee/caveman) (โหมดตอบ English สั้น) กับ [**pordee**](https://github.com/kerlos/pordee) (โหมดตอบไทยสั้น) ไว้ในตัวเดียว แล้วเพิ่ม `lang-auto-switch` hook ที่ตรวจภาษาของ prompt อัตโนมัติ แล้วเลือกโหมดให้เอง
 
 ---
 
-## Why this fork
+## ทำไมต้อง fork
 
-`caveman` strips English filler so Claude answers like a smart caveman (~75% fewer output tokens).
-`pordee` does the same for Thai — trimming ครับ/ค่ะ/อาจจะ/น่าจะ and other particles (~60-75% fewer tokens).
+`caveman` ตัด filler ของ English ทำให้ Claude ตอบสั้นแบบ smart caveman ลด output token ~75%
+`pordee` ทำแบบเดียวกันกับไทย ตัด ครับ/ค่ะ/อาจจะ/น่าจะ ทิ้ง ลด token ~60-75%
 
-Each works well on its own, but running them together is awkward: you have to type `/caveman` or `/pordee` every time you switch language. Most Claude Code users type in English but slip into Thai for domain-specific requirements (or when a word just won't come in English).
+ทั้ง 2 ตัวแยกกันทำงานได้ดี แต่ใช้พร้อมกันลำบาก เพราะต้องพิม `/caveman` หรือ `/pordee` เองทุกครั้งที่สลับภาษา นักพัฒนาคนไทยส่วนใหญ่พิม English เป็นหลัก แต่บางจังหวะนึก keyword ภาษาอังกฤษไม่ออก หรืออธิบาย requirement ที่เป็น domain ไทย ก็พิมไทยปนเข้ามา
 
-This fork solves that. The `lang-auto-switch` hook inspects every `UserPromptSubmit` event and injects the matching rule set into context **before** Claude responds.
+fork นี้แก้ตรงนั้น `lang-auto-switch` hook ทำงานทุกครั้งที่ user ส่ง prompt และ inject กฎของโหมดที่ถูกต้องเข้า context ก่อน Claude จะตอบ
 
-## How it works
+## ทำงานยังไง
 
 ```
 ┌──────────────────┐    UserPromptSubmit    ┌────────────────────┐
-│  Your prompt     │ ─────────────────────► │  lang-auto-switch  │
+│   Prompt ที่พิม  │ ─────────────────────► │  lang-auto-switch  │
 └──────────────────┘                        └──────────┬─────────┘
                                                        │
                           ┌────────────────────────────┼────────────────────────────┐
                           │                            │                            │
                           ▼                            ▼                            ▼
                   ┌───────────────┐           ┌─────────────────┐          ┌─────────────────┐
-                  │ Manual trigger│           │   Thai prose    │          │ English prose   │
-                  │  /pordee,     │           │   detected      │          │   detected      │
-                  │  /caveman,    │           ├─────────────────┤          ├─────────────────┤
-                  │  พอดี, etc.   │           │  pordee rules   │          │  caveman rules  │
-                  └───────┬───────┘           └────────┬────────┘          └────────┬────────┘
+                  │ Manual trigger│           │   ภาษาไทย       │          │   ภาษา English  │
+                  │  /pordee,     │           ├─────────────────┤          ├─────────────────┤
+                  │  /caveman,    │           │  pordee rules   │          │  caveman rules  │
+                  │  พอดี ฯลฯ     │           └────────┬────────┘          └────────┬────────┘
+                  └───────┬───────┘                    │                            │
                           │                            │                            │
                           └────────────────────────────┴────────────────────────────┘
                                                        │
                                                        ▼
                                             ┌────────────────────┐
-                                            │ Context injected   │
-                                            │ for this turn      │
+                                            │ Inject เข้า context│
+                                            │ ของ turn นั้น      │
                                             └────────────────────┘
 ```
 
-The hook runs locally. No API call, no telemetry, no server.
+Hook ทำงาน local ทั้งหมด ไม่มี API ไม่มี telemetry ไม่มี server
 
-### Detection algorithm
+### Algorithm ตรวจภาษา
 
-For each prompt the hook:
+ทุก prompt hook จะ:
 
-1. Strips fenced code blocks (` ``` … ``` `), inline code (`` `…` ``), and URLs — these don't represent how the user is speaking.
-2. Counts Thai characters in `U+0E00–U+0E7F` and Latin characters in `A-Z`/`a-z`.
-3. Looks at the **first alpha character** to decide whether the prompt opens in Thai or English.
-4. Applies a script-aware threshold:
+1. ตัด code block ที่อยู่ใน ` ``` … ``` `, inline code (`` `…` ``), และ URL ออก เพราะไม่ใช่ภาษาที่ user "พูด"
+2. นับ Thai char ใน range `U+0E00–U+0E7F` และ Latin char `A-Z`/`a-z`
+3. ดูตัวอักษรตัวแรกของ prompt ว่าเป็น Thai หรือ English เพื่อรู้ว่า user เริ่มประโยคด้วยภาษาอะไร
+4. ใช้ threshold ที่ปรับตามภาษาเริ่ม:
 
-| Opening | Thai share required | Reason |
+| ขึ้นต้นด้วย | สัดส่วน Thai ที่ต้องมี | เหตุผล |
 | --- | --- | --- |
-| Starts with Thai | ≥ 10% of alpha chars | User addresses Claude in Thai; English usually appears only as technical terms. |
-| Starts with English | ≥ 40% of alpha chars **and** ≥ 3 Thai chars | A trailing Thai confirmation tag like *ใช่ไหม* shouldn't flip the mode. |
+| ภาษาไทย | ≥ 10% ของ alpha char | user พูดไทยอยู่แล้ว English ที่ปนเข้ามาส่วนใหญ่เป็น technical term |
+| English | ≥ 40% ของ alpha char **และ** Thai ≥ 3 ตัว | Thai ตามท้ายประโยคแบบ "ใช่ไหม" ไม่ควรพลิกเป็นโหมดไทย |
 
-Manual triggers always win over auto-detection.
+Manual trigger ชนะการตรวจอัตโนมัติเสมอ
 
-## Install
+## ติดตั้ง
 
-Requirements: [Node.js 18+](https://nodejs.org) and [Claude Code](https://claude.ai/code).
+ต้องมี [Node.js 18+](https://nodejs.org) และ [Claude Code](https://claude.ai/code)
 
 ```bash
 git clone https://github.com/khunpoyzian/pordee-pen-caveman.git
@@ -73,88 +73,88 @@ cd pordee-pen-caveman
 node install.js
 ```
 
-The installer:
+Installer จะ:
 
-- Copies `lang-auto-switch.js` to `~/.claude/hooks/`.
-- Prepends the hook to `UserPromptSubmit` in `~/.claude/settings.json` (idempotent — re-running won't duplicate).
-- If `caveman` is already installed, sets its `defaultMode` to `off` so this hook owns per-turn mode selection.
+- copy `lang-auto-switch.js` ไป `~/.claude/hooks/`
+- เพิ่ม hook เข้า `UserPromptSubmit` ใน `~/.claude/settings.json` (รันซ้ำได้ ไม่ซ้ำ entry)
+- ถ้ามี `caveman` ติดตั้งอยู่ จะตั้ง `defaultMode` เป็น `off` ให้ hook นี้คุมโหมดต่อ turn เอง
 
-Restart Claude Code once and you're done.
+restart Claude Code 1 ครั้ง พร้อมใช้
 
-### Verify the install
+### ทดสอบหลังติดตั้ง
 
 ```bash
-npm test          # runs the lang-auto-switch test suite
+npm test
 ```
 
-## Manual overrides
+## Manual override
 
-The hook auto-detects, but explicit triggers always take precedence within a turn.
+Hook ตรวจอัตโนมัติ แต่ trigger ที่พิมเองชนะเสมอใน turn นั้น
 
-| You type | Result |
+| พิม | ผล |
 | --- | --- |
-| `/pordee` &nbsp;·&nbsp; `พอดี` &nbsp;·&nbsp; `พอดีโหมด` &nbsp;·&nbsp; `พูดสั้นๆ` | Force Thai terse mode (full) |
-| `/pordee lite` | Force Thai terse mode (lite) |
-| `/pordee stop` &nbsp;·&nbsp; `หยุดพอดี` &nbsp;·&nbsp; `พูดปกติ` | Disable Thai mode |
-| `/caveman` &nbsp;·&nbsp; `talk like caveman` | Force English terse mode (full) |
-| `/caveman lite` &nbsp;·&nbsp; `/caveman ultra` | Force English terse mode at the chosen level |
-| `/caveman stop` &nbsp;·&nbsp; `stop caveman` &nbsp;·&nbsp; `normal mode` | Disable English mode |
+| `/pordee` &nbsp;·&nbsp; `พอดี` &nbsp;·&nbsp; `พอดีโหมด` &nbsp;·&nbsp; `พูดสั้นๆ` | บังคับโหมดไทยกระชับ (full) |
+| `/pordee lite` | บังคับโหมดไทยกระชับ (lite) |
+| `/pordee stop` &nbsp;·&nbsp; `หยุดพอดี` &nbsp;·&nbsp; `พูดปกติ` | ปิดโหมดไทย |
+| `/caveman` &nbsp;·&nbsp; `talk like caveman` | บังคับโหมด English กระชับ (full) |
+| `/caveman lite` &nbsp;·&nbsp; `/caveman ultra` | บังคับโหมด English ที่ระดับที่เลือก |
+| `/caveman stop` &nbsp;·&nbsp; `stop caveman` &nbsp;·&nbsp; `normal mode` | ปิดโหมด English |
 
-### Levels
+### Level
 
-| Level | Behaviour |
+| ระดับ | พฤติกรรม |
 | --- | --- |
-| `lite` | Trims filler and pleasantries, keeps full grammar — suitable for professional writing. |
-| `full` (default) | Drops particles, uses fragments, follows the `[thing] [action] [reason]. [next].` pattern. |
-| `ultra` (caveman only) | Telegraph style — minimum words, technical terms exact. |
+| `lite` | ตัด filler และคำสุภาพ แต่ grammar ครบ เหมาะกับงานที่ต้องอ่านเป็นทางการ |
+| `full` (default) | ตัด particle ใช้ fragment ตาม pattern `[ของ] [ทำ] [เหตุผล]. [ขั้นต่อ].` |
+| `ultra` (เฉพาะ caveman) | สั้นที่สุด ใกล้ telegraph technical term ตรงตัว |
 
-Switch with `/pordee lite|full` or `/caveman lite|full|ultra`.
+สลับ: `/pordee lite|full` หรือ `/caveman lite|full|ultra`
 
-## Before / after
+## ก่อน / หลัง
 
-**Thai prompt — *"ทำไม React component re-render?"***
+**Prompt ไทย — *"ทำไม React component re-render?"***
 
-| Normal | pordee lite | pordee full |
+| ปกติ | pordee lite | pordee full |
 | --- | --- | --- |
-| `~80 tokens` | `~45 tokens · 44% saved` | `~22 tokens · 73% saved` |
+| `~80 token` | `~45 token · ประหยัด 44%` | `~22 token · ประหยัด 73%` |
 | "แน่นอนครับ ผมยินดีจะอธิบายให้นะครับ จริงๆ แล้วเหตุผลที่ React component ของคุณ re-render นั้น น่าจะเกิดจากการที่คุณส่ง object reference ใหม่เป็น prop ในทุกครั้งที่ component ถูก render ซึ่งทำให้ React มองว่า prop เปลี่ยน และทำการ re-render component ลูก ดังนั้นคุณอาจจะลองใช้ useMemo เพื่อ memoize object นั้นดูครับ" | "React component re-render เพราะส่ง object reference ใหม่เป็น prop ทุกครั้งที่ render ทำให้ React มองว่า prop เปลี่ยน และ re-render component ลูก ลองใช้ useMemo เพื่อ memoize object นั้น" | "Object ref ใหม่ทุก render. Inline object prop = ref ใหม่ = re-render. ห่อด้วย `useMemo`." |
 
-**English prompt — *"Why does my React component re-render?"***
+**Prompt English — *"Why does my React component re-render?"***
 
-| Normal | caveman full |
+| ปกติ | caveman full |
 | --- | --- |
 | "Of course! I'd be happy to explain. The reason your React component is re-rendering is likely because you're passing a new object reference as a prop on every render, which causes React to see the prop as changed and re-render the child component. You should consider wrapping the object in useMemo to memoize it." | "New object ref each render. Inline object prop = new ref = re-render. Wrap in `useMemo`." |
 
-See more examples in [pordee README](https://github.com/kerlos/pordee) and [caveman README](https://github.com/JuliusBrussee/caveman).
+ดูตัวอย่างเพิ่มที่ [pordee README](https://github.com/kerlos/pordee) และ [caveman README](https://github.com/JuliusBrussee/caveman)
 
 ## Auto-clarity
 
-The hook stays out of the way when terseness would be dangerous. For these prompts the active terse mode is temporarily suppressed so Claude responds in full sentences:
+บางจังหวะการตอบสั้นอันตราย hook จะหยุดโหมดกระชับชั่วคราว ตอบเต็มประโยค จบแล้วกลับมา:
 
-- Security warnings (`⚠️`, "danger", "vulnerability")
-- Irreversible commands (`DROP TABLE`, `rm -rf`, `git push --force`, `git reset --hard`, `git branch -D`)
-- Multi-step procedures where step order matters
-- You explicitly ask to slow down: `อะไรนะ`, `พูดอีกที`, `อธิบายชัดๆ`, `ขยายความ`
+- security warning (`⚠️`, "danger", "vulnerability")
+- คำสั่งย้อนกลับไม่ได้ (`DROP TABLE`, `rm -rf`, `git push --force`, `git reset --hard`, `git branch -D`)
+- ขั้นตอนหลายสเต็ปที่ลำดับสำคัญ
+- user พิม `อะไรนะ`, `พูดอีกที`, `อธิบายชัดๆ`, `ขยายความ`
 
-Terse mode resumes on the next turn.
+โหมดกระชับกลับมาทำงานใน turn ถัดไป
 
-## State and files
+## ไฟล์ที่เกี่ยวข้อง
 
-| Path | Purpose |
+| Path | หน้าที่ |
 | --- | --- |
-| `~/.pordee/state.json` | Current pordee mode: `{ enabled, level, version, lastChanged }`. Read by the statusline and stats command. |
-| `~/.claude/.caveman-active` | Caveman level flag (`lite` / `full` / `ultra`). Removed when caveman is off. |
-| `~/.claude/hooks/lang-auto-switch.js` | Installed copy of the hook. |
-| `~/.claude/settings.json` | Hook registration under `hooks.UserPromptSubmit`. |
+| `~/.pordee/state.json` | สถานะ pordee ปัจจุบัน: `{ enabled, level, version, lastChanged }` อ่านโดย statusline กับ stats |
+| `~/.claude/.caveman-active` | flag ของ caveman (`lite` / `full` / `ultra`) ลบเมื่อปิด caveman |
+| `~/.claude/hooks/lang-auto-switch.js` | hook ที่ติดตั้งแล้ว |
+| `~/.claude/settings.json` | จุดที่ลงทะเบียน hook ใน `hooks.UserPromptSubmit` |
 
-Environment overrides:
+Environment override:
 
-- `PORDEE_HOME` — override the directory for `state.json` (defaults to `~/.pordee`).
-- `CLAUDE_CONFIG_DIR` — override the Claude directory (defaults to `~/.claude`).
+- `PORDEE_HOME` — เปลี่ยน path ของ `state.json` (default `~/.pordee`)
+- `CLAUDE_CONFIG_DIR` — เปลี่ยน path ของ Claude (default `~/.claude`)
 
 ## Stats
 
-`/pordee-stats` reports the tokens saved in the current session.
+`/pordee-stats` แสดง token ที่ประหยัดได้ใน session ปัจจุบัน
 
 ```
 พอดี Stats
@@ -170,56 +170,56 @@ Est. tokens saved:     13,217 (~61%)
 Est. saved (USD):      ~$0.198
 ```
 
-| Command | Effect |
+| คำสั่ง | ผล |
 | --- | --- |
-| `/pordee-stats` | Stats for the current session |
-| `/pordee-stats --share` | One-line summary suitable for paste |
-| `/pordee-stats --all` | Lifetime totals |
-| `/pordee-stats --since 7d` | Rolling window (e.g. `24h`, `7d`) |
+| `/pordee-stats` | สถิติ session ปัจจุบัน |
+| `/pordee-stats --share` | สรุป 1 บรรทัด copy paste ได้ |
+| `/pordee-stats --all` | ยอดสะสมตลอด |
+| `/pordee-stats --since 7d` | ย้อนหลังตามช่วง (เช่น `24h`, `7d`) |
 
 ## Troubleshooting
 
-| Symptom | Likely cause | Fix |
+| อาการ | สาเหตุที่เป็นไปได้ | วิธีแก้ |
 | --- | --- | --- |
-| No mode switching at all | Hook not registered after install. | Open `~/.claude/settings.json` and confirm `lang-auto-switch.js` appears under `hooks.UserPromptSubmit`. Restart Claude Code. |
-| Both pordee and caveman rules appear in one turn | An older `pordee-mode-tracker` or `caveman-mode-tracker` is still registered. | Remove duplicate hooks from `settings.json`. Only `lang-auto-switch.js` should be present. |
-| Thai prompt still answered in long English | Threshold edge case — try a longer Thai sentence, or force with `พอดี`. | Open an issue with the exact prompt so the detection can be tuned. |
-| `/pordee lite` runs but mode shows `full` | Pre-fork bug. | Make sure the installed `lang-auto-switch.js` matches this repo's `hooks/lang-auto-switch.js`. |
+| ไม่สลับโหมดเลย | hook ไม่ถูกลงทะเบียนหลังติดตั้ง | เปิด `~/.claude/settings.json` ดูว่ามี `lang-auto-switch.js` ใต้ `hooks.UserPromptSubmit` ไหม แล้ว restart Claude Code |
+| โผล่ทั้ง pordee + caveman ใน turn เดียว | มี `pordee-mode-tracker` หรือ `caveman-mode-tracker` เก่าค้างอยู่ | ลบ hook ซ้ำใน `settings.json` ให้เหลือแค่ `lang-auto-switch.js` |
+| พิมไทยแต่ตอบ English ยาว | edge case ของ threshold | ลองพิมประโยคไทยให้ยาวขึ้น หรือพิม `พอดี` บังคับ ถ้าเจอบ่อย เปิด issue พร้อม prompt ที่ใช้ |
+| `/pordee lite` ใช้ได้แต่ statusline แสดง `full` | bug ก่อน fork | ตรวจว่า `lang-auto-switch.js` ที่ติดตั้งตรงกับไฟล์ใน repo นี้ |
 
 ## Uninstall
 
 ```bash
-# Remove the hook entry from ~/.claude/settings.json (under hooks.UserPromptSubmit)
-# Then delete the installed files:
+# ลบ entry hook ออกจาก ~/.claude/settings.json (ใต้ hooks.UserPromptSubmit)
+# จากนั้นลบไฟล์:
 rm ~/.claude/hooks/lang-auto-switch.js
 rm -rf ~/.pordee
-rm ~/.claude/.caveman-active   # if present
+rm ~/.claude/.caveman-active   # ถ้ามี
 ```
 
-Restart Claude Code to apply.
+restart Claude Code
 
-## Limitations
+## ข้อจำกัด
 
-- Claude Code v1 only.
-- Detection covers Thai vs Latin scripts. Japanese, Chinese, Korean prose will fall back to caveman (English) mode.
-- The detection heuristic is character-based, not semantic — pathological inputs (large code blocks pasted with one Thai word) can still surprise it. Use the manual triggers when in doubt.
+- รองรับ Claude Code v1 เท่านั้น
+- ตรวจแค่ Thai vs Latin ภาษาอื่น (Japanese, Chinese, Korean) จะตกเป็นโหมด caveman (English)
+- heuristic ใช้การนับ char ไม่ใช่ semantic — input แบบ pathological (paste code block ยาว ๆ พร้อมคำไทย 1 คำ) ยังหลุดได้ ใช้ manual trigger ถ้าไม่แน่ใจ
 
 ## Development
 
 ```bash
 git clone https://github.com/khunpoyzian/pordee-pen-caveman.git
 cd pordee-pen-caveman
-npm install         # only if you add dependencies; none required at runtime
+npm install         # ติดตั้งเฉพาะถ้าเพิ่ม dependency เอง runtime ไม่ต้องใช้
 node --test tests/test_lang_auto_switch.js
 ```
 
-Tests cover language detection edge cases, trigger classification, level parsing, and end-to-end hook invocation against a temp `PORDEE_HOME`.
+Test ครอบ: detection edge case, trigger classification, level parsing, end-to-end hook invocation บน temp `PORDEE_HOME`
 
 ## Credits
 
-- [**caveman**](https://github.com/JuliusBrussee/caveman) by Julius Brussee — English terse-mode foundation.
-- [**pordee**](https://github.com/kerlos/pordee) by Vatunyoo Suwannapisit — Thai terse-mode foundation.
-- `lang-auto-switch` hook in this fork is original code that performs the detect-and-switch logic.
+- [**caveman**](https://github.com/JuliusBrussee/caveman) โดย Julius Brussee — โหมด English terse ต้นทาง
+- [**pordee**](https://github.com/kerlos/pordee) โดย Vatunyoo Suwannapisit — โหมด Thai terse ต้นทาง
+- `lang-auto-switch` hook ใน fork นี้ เป็น code ใหม่ทำหน้าที่ detect + switch
 
 ## License
 
