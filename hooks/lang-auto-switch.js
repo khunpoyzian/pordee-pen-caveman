@@ -135,8 +135,10 @@ process.stdin.on('end', () => {
     }
 
     if (trigger === 'caveman-enable') {
-      // Manual /caveman — caveman plugin handles flag + emit. Just clear pordee.
+      // Manual /caveman — set flag + emit rules ourselves (self-contained, no plugin needed)
       setPordeeState(false);
+      setCavemanFlag('full');
+      emit(CAVEMAN_RULES);
       process.exit(0);
     }
 
@@ -156,9 +158,10 @@ process.stdin.on('end', () => {
       setCavemanFlag(null);
       emit(PORDEE_RULES);
     } else {
-      // English: write caveman flag so caveman plugin emits the reminder. No emit here.
+      // English: set caveman flag AND emit rules ourselves (self-contained, no plugin needed)
       setPordeeState(false);
       setCavemanFlag('full');
+      emit(CAVEMAN_RULES);
     }
   } catch (e) {}
   process.exit(0);
