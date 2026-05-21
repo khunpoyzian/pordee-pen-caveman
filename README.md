@@ -1,80 +1,107 @@
-# pordee (พอดี)
+# pordee-pen-caveman
 
-> ทำไมใช้คำเยอะ ตอบสั้นๆ ก็เข้าใจ
+> พิมไทย → ตอบไทยกระชับ
+> Type English → terse English reply
+> สลับอัตโนมัติ ไม่ต้องสั่ง
 
-ได้แรงบันดาลใจมาจาก [caveman](https://github.com/JuliusBrussee/caveman) — pordee เป็นรุ่นภาษาไทยที่ตัด token ทิ้งโดยไม่เสียความถูกต้องทาง technical
+Claude Code plugin ที่รวม [**caveman**](https://github.com/JuliusBrussee/caveman) (English terse mode) กับ [**pordee**](https://github.com/kerlos/pordee) (Thai terse mode) ไว้ในตัวเดียว แล้วเพิ่ม `lang-auto-switch` hook เป็นตัวสลับโหมดให้ตามภาษาที่ผู้ใช้พิมมา
 
 ---
 
-`pordee` คือ Claude Code plugin สั่งให้ agent ตอบภาษาไทยกระชับ — ตัดคำสุภาพ (ครับ/ค่ะ/นะคะ), คำลังเล (อาจจะ/น่าจะ), และคำเชื่อมที่ไม่จำเป็นทิ้ง เก็บ technical term อังกฤษไว้ตามเดิม
+## ที่มา
 
-ผล: ใช้ token น้อยลง 60-75% เนื้อหาเท่าเดิม
+`caveman` ตัด filler ภาษาอังกฤษ ทำให้ Claude ตอบสั้นแบบ smart caveman ลด token ~75%
+`pordee` ทำหน้าที่เดียวกันสำหรับภาษาไทย ตัด ครับ/ค่ะ/อาจจะ/น่าจะ ทิ้ง ลด token ~60-75%
+
+ทั้ง 2 ตัวต่างคนต่างทำงานดี แต่ใช้พร้อมกันลำบาก เพราะต้องสั่ง `/caveman` หรือ `/pordee` เองทุกครั้งที่สลับภาษา
+
+`pordee-pen-caveman` แก้ตรงนี้ ตรวจภาษาของ prompt อัตโนมัติแล้ว inject กฎของโหมดที่ถูกต้องเข้า context ให้เอง
+
+---
+
+## ทำไมถึงทำ
+
+นักพัฒนาส่วนใหญ่ที่ใช้ Claude Code พิมเป็น English แต่บางจังหวะนึกคำอังกฤษไม่ออก หรืออธิบาย requirement ที่เป็น domain ภาษาไทย ก็พิมไทยปนเข้ามา
+
+ก่อนหน้านี้ต้องเลือก:
+- เปิด `caveman` อย่างเดียว → ตอบ English สั้น แต่พอเปลี่ยนเป็นไทยก็ตอบไทยแบบยาวเต็มประโยค
+- เปิด `pordee` อย่างเดียว → ตรงข้าม
+- สลับมือเอง → ลืมตลอด
+
+ของ fork นี้: พิมภาษาไหน Claude ก็ตอบสั้นในภาษานั้น ไม่ต้องคิด
 
 ---
 
 ## ติดตั้ง
 
-### ผ่าน Claude Code plugin (แนะนำ)
+ต้องมี [Node.js 18+](https://nodejs.org) และ [Claude Code](https://claude.ai/code)
 
 ```bash
-claude plugin marketplace add kerlos/pordee
-claude plugin install pordee@pordee
+git clone https://github.com/khunpoyzian/pordee-pen-caveman.git
+cd pordee-pen-caveman
+node install.js
 ```
 
-หลังติดตั้งเสร็จ hooks จะถูก register อัตโนมัติ — เริ่ม session ใหม่แล้ว `/pordee` ใช้ได้ทันที
+installer จะ:
+- copy hook ไป `~/.claude/hooks/`
+- เพิ่ม `lang-auto-switch` เข้า `~/.claude/settings.json` (UserPromptSubmit)
+- ตั้งค่าให้ทำงานร่วมกับ caveman plugin ที่มีอยู่ (ถ้าติดตั้งไว้)
+
+restart Claude Code 1 ครั้ง เริ่มใช้งานได้
 
 ---
 
-## วิธีใช้
+## ทำงานยังไง
 
-### Slash command
+ทุกครั้งที่ผู้ใช้ส่ง prompt:
 
-| คำสั่ง | ผล |
+1. Hook นับ Thai character vs Latin character ใน prompt (ข้าม code block)
+2. ถ้า Thai ≥ 15% ของ alpha chars → inject `PORDEE_RULES` เข้า context + ตั้ง `~/.pordee/state.json` enabled=true
+3. ถ้าน้อยกว่า → inject `CAVEMAN_RULES` + เขียน flag `~/.claude/.caveman-active`
+4. State persist ข้าม turn เพื่อให้ statusline กับ stats command อ่านได้
+
+ไม่มี API ไม่มี server ทุกอย่างรันใน local
+
+---
+
+## สั่ง manual
+
+ปกติไม่ต้องสั่ง แต่ถ้าอยากบังคับ:
+
+| พิม | ผล |
 |---|---|
-| `/pordee` | เปิด default level (full) |
-| `/pordee lite` | โหมดเบา — ตัดคำสุภาพและ filler ออก แต่ grammar เต็ม |
-| `/pordee full` | โหมดเต็ม — ตัดให้สั้นที่สุด |
-| `/pordee stop` | ปิด |
-| `/pordee-stats` | ดูสถิติ token ของ session ปัจจุบัน |
-| `/pordee-stats --share` | สรุปสถิติ 1 บรรทัด (copy-paste ได้) |
-
-### Keyword (ไม่ต้องพิมพ์ slash)
-
-พิมพ์คำเหล่านี้เป็นข้อความปกติในแชต — pordee จะเปิด/ปิดให้อัตโนมัติ ต้องเป็นข้อความทั้งบรรทัด ไม่ใช่ส่วนหนึ่งของประโยค
-
-| Keyword | ผล |
-|---|---|
-| `พอดี` | เปิด |
-| `พอดีโหมด` | เปิด |
-| `พูดสั้นๆ` | เปิด |
-| `หยุดพอดี` | ปิด |
-| `พูดปกติ` | ปิด |
+| `พอดี` | บังคับ Thai terse mode |
+| `/pordee` | เหมือนกัน |
+| `หยุดพอดี` | ปิด Thai mode |
+| `/pordee stop` | เหมือนกัน |
+| `/caveman` | บังคับ English terse mode |
+| `talk like caveman` | เหมือนกัน |
+| `stop caveman` | ปิด English mode |
+| `normal mode` | เหมือนกัน |
 
 ---
 
-## ระดับ (Levels)
+## Levels
 
-### 🪶 Lite — `/pordee lite`
+ทั้ง 2 โหมดมีระดับ:
 
-ตัดคำสุภาพ (ครับ/ค่ะ/นะคะ), คำลังเลใจ (อาจจะ/น่าจะ/จริงๆแล้ว), และคำทักทาย (ได้เลยครับ/แน่นอน) ทิ้ง แต่เก็บ grammar เต็ม อ่านแล้วยังเป็นภาษาไทยปกติ professional
+- **lite** ตัดคำสุภาพ / filler แต่ grammar เต็ม อ่านเป็น professional
+- **full** (default) ตัด particle, ใช้ fragment, pattern `[ของ] [ทำ] [เหตุผล]. [ขั้นต่อ].`
+- **ultra** (caveman only) ตัดให้สั้นที่สุด ใกล้ telegraph
 
-### ⚡ Full — `/pordee` หรือ `/pordee full` (default)
-
-ตัดเหมือน lite + ตัด particle ที่ซ้ำซ้อน (ที่/ซึ่ง/ว่า/อยู่/กำลัง) + ตัด nominalizer (การ-, ความ-) + ใช้คำสั้น (ดู ไม่ใช่ ตรวจสอบ) + ประโยคสั้นได้
-
-Pattern: `[ของ] [ทำ] [เหตุผล]. [ขั้นต่อ].`
+สลับ: `/pordee lite|full` หรือ `/caveman lite|full|ultra`
 
 ---
 
-## ก่อน / หลัง (Before / After)
+## ก่อน / หลัง
 
-### ตัวอย่าง 1 — "ทำไม React component ถึง re-render?"
+### Thai prompt — "ทำไม React component re-render?"
 
 <table>
 <tr>
-<th width="34%">🗣️ Normal<br><sub>~80 tokens</sub></th>
-<th width="33%">🪶 Lite<br><sub>~45 tokens · 44% saved</sub></th>
-<th width="33%">⚡ Full<br><sub>~22 tokens · 73% saved</sub></th>
+<th width="34%">Normal<br><sub>~80 tokens</sub></th>
+<th width="33%">pordee lite<br><sub>~45 tokens · 44% saved</sub></th>
+<th width="33%">pordee full<br><sub>~22 tokens · 73% saved</sub></th>
 </tr>
 <tr>
 <td>"แน่นอนครับ ผมยินดีจะอธิบายให้นะครับ จริงๆ แล้วเหตุผลที่ React component ของคุณ re-render นั้น น่าจะเกิดจากการที่คุณส่ง object reference ใหม่เป็น prop ในทุกครั้งที่ component ถูก render ซึ่งทำให้ React มองว่า prop เปลี่ยน และทำการ re-render component ลูก ดังนั้นคุณอาจจะลองใช้ useMemo เพื่อ memoize object นั้นดูครับ"</td>
@@ -83,151 +110,26 @@ Pattern: `[ของ] [ทำ] [เหตุผล]. [ขั้นต่อ].`
 </tr>
 </table>
 
-```
-┌─────────────────────────────────────┐
-│  Lite  ████░░░░░░  44% saved        │
-│  Full  ███████░░░  73% saved        │
-└─────────────────────────────────────┘
-```
-
----
-
-### ตัวอย่าง 2 — "อธิบาย database connection pooling"
+### English prompt — "Why does my React component re-render?"
 
 <table>
 <tr>
-<th width="34%">🗣️ Normal<br><sub>~70 tokens</sub></th>
-<th width="33%">🪶 Lite<br><sub>~35 tokens · 50% saved</sub></th>
-<th width="33%">⚡ Full<br><sub>~18 tokens · 74% saved</sub></th>
+<th width="34%">Normal</th>
+<th width="33%">caveman full</th>
 </tr>
 <tr>
-<td>"ครับ การทำ database connection pooling นั้น โดยทั่วไปแล้วก็คือการที่เราเก็บ connection ของ database ที่เปิดไว้แล้ว เพื่อนำกลับมาใช้ใหม่อีกครั้ง แทนที่จะต้องเปิด connection ใหม่ทุกครั้งที่มี request เข้ามา ซึ่งจะช่วยลด overhead ของการทำ TCP handshake และ authentication ได้อย่างมีประสิทธิภาพ"</td>
-<td>"Connection pooling เก็บ connection database ที่เปิดไว้แล้ว เพื่อนำกลับมาใช้ใหม่ ไม่ต้องเปิดใหม่ทุก request ลด overhead ของ TCP handshake และ authentication"</td>
-<td>"Pool reuse connection ที่เปิดไว้. ไม่เปิดใหม่ทุก request. ข้าม TCP handshake."</td>
+<td>"Of course! I'd be happy to explain. The reason your React component is re-rendering is likely because you're passing a new object reference as a prop on every render, which causes React to see the prop as changed and re-render the child component. You should consider wrapping the object in useMemo to memoize it."</td>
+<td>"New object ref each render. Inline object prop = new ref = re-render. Wrap in <code>useMemo</code>."</td>
 </tr>
 </table>
 
-```
-┌─────────────────────────────────────┐
-│  Lite  █████░░░░░  50% saved        │
-│  Full  ███████░░░  74% saved        │
-└─────────────────────────────────────┘
-```
+ดูตัวอย่างเพิ่มเติมที่ [pordee README](https://github.com/kerlos/pordee) และ [caveman README](https://github.com/JuliusBrussee/caveman)
 
 ---
 
-### ตัวอย่าง 3 — Bug report (auth middleware)
+## Stats
 
-<table>
-<tr>
-<th width="34%">🗣️ Normal<br><sub>~55 tokens</sub></th>
-<th width="33%">🪶 Lite<br><sub>~30 tokens · 45% saved</sub></th>
-<th width="33%">⚡ Full<br><sub>~14 tokens · 75% saved</sub></th>
-</tr>
-<tr>
-<td>"ครับ ผมตรวจสอบให้แล้วนะครับ ปัญหาที่คุณเจอน่าจะเกิดจาก bug ใน auth middleware ครับ จริงๆ แล้วในส่วนของ token expiry check นั้น โค้ดใช้เครื่องหมาย <code>&lt;</code> แทนที่จะเป็น <code>&lt;=</code> ซึ่งทำให้ token ที่หมดอายุพอดีไม่ถูก reject ดังนั้นเราควรจะแก้ตรงจุดนี้ครับ"</td>
-<td>"Bug อยู่ที่ auth middleware ส่วน token expiry check ใช้ <code>&lt;</code> แทนที่จะเป็น <code>&lt;=</code> ทำให้ token ที่หมดอายุพอดีไม่ถูก reject แก้:"</td>
-<td>"Bug ที่ auth middleware. Token expiry ใช้ <code>&lt;</code> ไม่ใช่ <code>&lt;=</code>. Fix:"</td>
-</tr>
-</table>
-
-```
-┌─────────────────────────────────────┐
-│  Lite  █████░░░░░  45% saved        │
-│  Full  ████████░░  75% saved        │
-└─────────────────────────────────────┘
-```
-
----
-
-### ตัวอย่าง 4 — "แนะนำอาหารกลางวันให้หน่อย"
-
-<table>
-<tr>
-<th width="34%">🗣️ Normal<br><sub>~70 tokens</sub></th>
-<th width="33%">🪶 Lite<br><sub>~32 tokens · 54% saved</sub></th>
-<th width="33%">⚡ Full<br><sub>~14 tokens · 80% saved</sub></th>
-</tr>
-<tr>
-<td>"ได้เลยครับ จริงๆ แล้วการเลือกอาหารกลางวันก็ขึ้นอยู่กับหลายปัจจัยนะครับ เช่น งบประมาณ เวลาที่มี และความต้องการทางโภชนาการของคุณ ถ้าคุณอยากทานอาหารที่ทำง่ายและมีประโยชน์ ผมขอแนะนำว่าน่าจะลองทำสลัดไก่ย่างดูครับ เพราะว่ามีโปรตีนสูงและไม่ใช้เวลาเตรียมนานเลย"</td>
-<td>"อาหารกลางวันขึ้นอยู่กับงบ เวลา และโภชนาการ ถ้าอยากกินง่ายและมีประโยชน์ ลองสลัดไก่ย่าง โปรตีนสูงและเตรียมไม่นาน"</td>
-<td>"งบ + เวลา + โภชนาการ. ง่ายและดี → สลัดไก่ย่าง. โปรตีนสูง, เตรียมเร็ว."</td>
-</tr>
-</table>
-
-```
-┌─────────────────────────────────────┐
-│  Lite  █████░░░░░  54% saved        │
-│  Full  ████████░░  80% saved        │
-└─────────────────────────────────────┘
-```
-
----
-
-### ตัวอย่าง 5 — "เที่ยวเชียงใหม่ ไปเดือนไหนดี"
-
-<table>
-<tr>
-<th width="34%">🗣️ Normal<br><sub>~75 tokens</sub></th>
-<th width="33%">🪶 Lite<br><sub>~30 tokens · 60% saved</sub></th>
-<th width="33%">⚡ Full<br><sub>~12 tokens · 84% saved</sub></th>
-</tr>
-<tr>
-<td>"ครับ ถ้าคุณอยากไปเที่ยวเชียงใหม่ ผมแนะนำว่าน่าจะไปช่วงเดือนพฤศจิกายนถึงกุมภาพันธ์ครับ เพราะว่าเป็นช่วงที่อากาศเย็นสบาย ไม่ร้อนเกินไป และไม่มีฝนตกบ่อยเหมือนช่วงอื่นๆ จริงๆ แล้วเดือนธันวาคมก็เป็นเดือนที่นิยมที่สุดเลยนะครับ แต่ก็จะคนเยอะหน่อย"</td>
-<td>"ไปเชียงใหม่ ช่วงพฤศจิกายน-กุมภาพันธ์ดีที่สุด อากาศเย็นสบาย ไม่ร้อน ฝนน้อย ธันวาคมนิยมที่สุดแต่คนเยอะ"</td>
-<td>"พ.ย.-ก.พ. ดีสุด. อากาศเย็น, ฝนน้อย. ธ.ค. คนเยอะ."</td>
-</tr>
-</table>
-
-```
-┌─────────────────────────────────────┐
-│  Lite  ██████░░░░  60% saved        │
-│  Full  ████████░░  84% saved        │
-└─────────────────────────────────────┘
-```
-
----
-
-### ตัวอย่าง 6 — "วิธีนอนหลับให้สนิท"
-
-<table>
-<tr>
-<th width="34%">🗣️ Normal<br><sub>~70 tokens</sub></th>
-<th width="33%">🪶 Lite<br><sub>~32 tokens · 54% saved</sub></th>
-<th width="33%">⚡ Full<br><sub>~14 tokens · 80% saved</sub></th>
-</tr>
-<tr>
-<td>"ครับ การนอนหลับให้สนิทนั้นมีหลายวิธีนะครับ ก่อนอื่นเลย คุณควรจะหลีกเลี่ยงการดื่มกาแฟหรือเครื่องดื่มที่มีคาเฟอีนหลังบ่ายสาม จริงๆ แล้วก็ควรจะปิดหน้าจอทุกชนิดอย่างน้อย 30 นาทีก่อนนอนนะครับ และพยายามเข้านอนเวลาเดิมทุกวันเพื่อให้ร่างกายปรับนาฬิกาชีวิต"</td>
-<td>"นอนหลับสนิทมีหลายวิธี เลี่ยงคาเฟอีนหลังบ่ายสาม ปิดหน้าจอ 30 นาทีก่อนนอน เข้านอนเวลาเดิมทุกวันเพื่อปรับนาฬิกาชีวิต"</td>
-<td>"เลี่ยงคาเฟอีนหลังบ่าย 3. ปิดจอ 30 นาทีก่อนนอน. เข้านอนเวลาเดิม → ปรับ circadian."</td>
-</tr>
-</table>
-
-```
-┌─────────────────────────────────────┐
-│  Lite  █████░░░░░  54% saved        │
-│  Full  ████████░░  80% saved        │
-└─────────────────────────────────────┘
-```
-
----
-
-## กลไกการทำงาน
-
-1. ติดตั้ง plugin → Claude Code register hook ของ pordee อัตโนมัติ
-2. เริ่ม session ใหม่ → SessionStart hook อ่าน state ที่ `~/.pordee/state.json`
-3. ถ้า `enabled=true` → inject กฎ pordee เข้า context ของ session
-4. ทุก turn ที่ user พิมพ์ → UserPromptSubmit hook
-   - ตรวจ trigger ใน prompt (`/pordee`, `พอดี`, `หยุดพอดี`, ฯลฯ)
-   - update state ถ้าเจอ trigger
-   - ฉีด reminder ของ level ปัจจุบันเข้า context (กันไม่ให้ model drift)
-5. State อยู่ที่ `~/.pordee/state.json` — ถาวรข้าม session
-
----
-
-## สถิติ (Stats)
-
-`/pordee-stats` แสดง token usage ของ session ปัจจุบัน + ประมาณการ token ที่ประหยัดได้จากการใช้ pordee
+`/pordee-stats` แสดง token ที่ประหยัดได้ใน session ปัจจุบัน
 
 ```
 พอดี Stats
@@ -241,143 +143,41 @@ Cache-read tokens:     2,100
 Est. without pordee:   21,667
 Est. tokens saved:     13,217 (~61%)
 Est. saved (USD):      ~$0.198
-Savings est. from benchmarks/ (median per-task). Actual varies by task.
 ```
 
 | คำสั่ง | ผล |
 |---|---|
-| `/pordee-stats` | สถิติ session ปัจจุบัน + lifetime summary |
-| `/pordee-stats --share` | สรุป 1 บรรทัด — เช่น `⚡ Saved 13,217 output tokens (~$0.198) across 12 turns this session — pordee` |
-| `/pordee-stats --all` | สถิติรวมทุก session (lifetime) |
-| `/pordee-stats --since 7d` | สถิติย้อนหลัง 7 วัน |
-
-### Benchmark
-
-compression ratio ที่ stats ใช้มาจาก `benchmarks/compression.json` — สร้างจากการรัน prompt ชุดทดสอบภาษาไทย 8 ข้อ ผ่าน API แบบปกติ vs pordee แล้วคิด median
-
-```bash
-# รัน benchmark (ต้องมี ANTHROPIC_API_KEY)
-export ANTHROPIC_BASE_URL=https://api.kimi.com/coding/v1
-node benchmarks/run.js --level full
-node benchmarks/run.js --level lite
-```
-
-หรือใช้ `--dry-run` สร้าง mock data สำหรับทดสอบ:
-
-```bash
-node benchmarks/run.js --dry-run --level full
-```
+| `/pordee-stats` | สถิติ session ปัจจุบัน |
+| `/pordee-stats --share` | สรุป 1 บรรทัด copy paste ได้ |
+| `/pordee-stats --all` | lifetime |
+| `/pordee-stats --since 7d` | ย้อนหลัง 7 วัน |
 
 ---
 
-## ตอนไหน pordee จะหยุดเอง 
+## Auto-clarity
 
-บางสถานการณ์ การพูดสั้นเกินไปอันตรายหรือคนอ่านอาจเข้าใจผิด pordee จะปิดตัวเองชั่วคราว ตอบเป็นภาษาไทยปกติเต็มประโยค จบแล้วค่อยกลับมา
+บางจังหวะการพูดสั้นอันตราย hook จะหยุด terse mode ชั่วคราว ตอบยาวเต็มประโยค จบแล้วกลับมา:
 
-ถ้าผู้ใช้ต้องการให้อธิบายชัด ๆ พิมพ์คำต่อไปนี้ pordee จะหยุดและตอบยาวขึ้น:
+- security warning หรือ ⚠️
+- คำสั่งย้อนกลับไม่ได้ `DROP TABLE`, `rm -rf`, `git push --force`, `git reset --hard`, `git branch -D`
+- ขั้นตอนหลายสเต็ปที่ลำดับสำคัญ
+- ผู้ใช้พิม `อะไรนะ` / `พูดอีกที` / `อธิบายชัดๆ` / `ขยายความ`
 
-| คำที่ผู้ใช้พิมพ์ | ความหมาย |
-|---|---|
-| `อะไรนะ` | ฟังไม่ทัน ขอใหม่ |
-| `พูดอีกที` | ขอตอบซ้ำ |
-| `อธิบายชัดๆ` | ขอละเอียดกว่านี้ |
-| `ขยายความ` | ขอรายละเอียด |
+---
 
-นอกจากนี้ pordee จะหยุดเองเมื่อ:
+## เครดิต
 
-- มี **security warning** หรือ ⚠️ ในคำตอบ
-- คำสั่งที่ย้อนกลับไม่ได้ — `DROP TABLE`, `rm -rf`, `git push --force`, `git reset --hard`, `git branch -D`
-- ขั้นตอนหลายสเต็ปที่ลำดับสำคัญ และ ประโยคสั้นเสี่ยงทำให้สับสน
-
-หลังจบส่วนที่ต้องชัด pordee กลับมาโหมดเดิมทันที
+- [**caveman**](https://github.com/JuliusBrussee/caveman) by Julius Brussee — English terse mode ต้นทาง
+- [**pordee**](https://github.com/kerlos/pordee) by Vatunyoo Suwannapisit — Thai terse mode
+- `lang-auto-switch` hook ที่อยู่ใน fork นี้ เป็นโค้ดใหม่ทำหน้าที่ detect + switch
 
 ---
 
 ## ข้อจำกัด
 
-- ตอนนี้รองรับเฉพาะ Claude Code (v1) — โปรแกรมอื่นๆ จะเพิ่มเข้ามาในทีหลัง
-
----
-
-# Extras: lang-auto-switch hook (pordee-pen-caveman)
-
-> พิมภาษาไทย → Claude ตอบไทยกระชับ  
-> Type English → Claude replies terse English  
-> สลับอัตโนมัติ — ไม่ต้องพิมคำสั่งอะไรเพิ่ม
-
----
-
-## ติดตั้ง / Install (3 ขั้นตอน)
-
-### ขั้นตอนที่ 1 — ดาวน์โหลด
-
-กด **Code → Download ZIP** แล้ว unzip  
-หรือถ้ามี git:
-
-```
-git clone https://github.com/khunpoyzian/pordee-pen-caveman.git
-cd pordee-pen-caveman
-```
-
----
-
-### ขั้นตอนที่ 2 — รัน installer
-
-ต้องมี [Node.js](https://nodejs.org) (version 18 ขึ้นไป) — ถ้าไม่มีให้ดาวน์โหลดก่อน
-
-เปิด Terminal / PowerShell แล้วรัน:
-
-```
-node install.js
-```
-
-installer จะ:
-- copy hook ไปที่ `~/.claude/hooks/`
-- เพิ่ม hook เข้า `~/.claude/settings.json` ให้อัตโนมัติ
-- ตั้งค่า caveman plugin ให้ทำงานร่วมกันได้ (ถ้ามี)
-
----
-
-### ขั้นตอนที่ 3 — restart Claude Code
-
-ปิดแล้วเปิด Claude Code ใหม่ — เสร็จแล้ว
-
----
-
-## ทดสอบ
-
-ลองพิมภาษาไทย → Claude จะตอบไทยกระชับ ไม่มีคำสุภาพ ไม่ลังเล  
-ลองพิมภาษาอังกฤษ → Claude จะตอบอังกฤษกระชับ ตัด filler ออก
-
----
-
-## คำสั่ง manual (ถ้าอยากบังคับ)
-
-| พิม | ผล |
-|---|---|
-| `พอดี` | บังคับ Thai mode |
-| `หยุดพอดี` | ปิด Thai mode |
-| `/caveman full` | บังคับ English mode |
-| `stop caveman` | ปิด English mode |
-
----
-
-## ต้องการอะไรบ้าง
-
-| สิ่งที่ต้องมี | จำเป็น? |
-|---|---|
-| [Claude Code](https://claude.ai/code) | ✅ |
-| [Node.js 18+](https://nodejs.org) | ✅ |
-| [caveman plugin](https://github.com/JuliusBrussee/caveman) | optional (สำหรับ English mode ที่สมบูรณ์กว่า) |
-| [pordee plugin](https://github.com/kerlos/pordee) | optional (สำหรับ `/pordee` commands) |
-
----
-
-## มันทำงานยังไง
-
-Hook ตรวจ prompt ทุก turn: ถ้า Thai character ≥ 15% ของ text → inject pordee rules. ถ้าน้อยกว่า → ให้ caveman rules ทำงาน  
-
-ไม่มี server ไม่มี API ไม่เก็บข้อมูล — ทุกอย่างรันใน local
+- รองรับ Claude Code (v1) เท่านั้น
+- detect ภาษาเฉพาะ Thai vs Latin ภาษาอื่น (Japanese, Chinese) จะถูกจัดว่า English
+- threshold 15% Thai ถ้าพิม English ปนคำไทย 1-2 คำ จะยังเป็น English mode
 
 ---
 
