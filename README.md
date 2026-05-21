@@ -10,7 +10,7 @@ Plugin สำหรับ Claude Code ที่รวม [**caveman**](https://g
 
 ---
 
-## ทำไมต้อง fork
+## ทำไมต้อง pordee-pen-caveman
 
 `caveman` ตัด filler ของ English ทำให้ Claude ตอบสั้นแบบ smart caveman ลด output token ~75%
 `pordee` ทำแบบเดียวกันกับไทย ตัด ครับ/ค่ะ/อาจจะ/น่าจะ ทิ้ง ลด token ~60-75%
