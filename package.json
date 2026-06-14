@@ -5,10 +5,12 @@
   "private": true,
   "type": "commonjs",
   "scripts": {
-    "test": "node --test tests/test_activate.js tests/test_state.js tests/test_tracker.js tests/test_triggers.js && node tests/test_benchmark.js && node tests/test_pordee_stats.js && node plugins/pordee-codex/scripts/test-hook.js",
+    "test": "node --test tests/test_activate.js tests/test_state.js tests/test_tracker.js tests/test_triggers.js && node tests/test_benchmark.js && node tests/test_pordee_stats.js && node plugins/pordee-codex/scripts/test-hook.js && node plugins/pordee-codex/scripts/test-force-ultra-hook.js",
     "test:codex": "node plugins/pordee-codex/scripts/test-hook.js",
+    "test:codex:force-ultra": "node plugins/pordee-codex/scripts/test-force-ultra-hook.js",
     "install:claude": "node install.js claude",
     "install:codex": "node install.js codex",
+    "install:codex:force-ultra": "node install.js codex --force-ultra",
     "install:both": "node install.js both"
   },
   "engines": {

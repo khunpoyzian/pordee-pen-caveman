@@ -15,6 +15,7 @@ const RESET = "\x1b[0m";
 const REPO_ROOT = __dirname;
 const CODEX_PLUGIN_NAME = "pordee-codex";
 const CODEX_MARKETPLACE_NAME = "pordee-codex";
+const CODEX_FORCE_ULTRA_HOOK = "pordee-force-ultra.js";
 
 function ok(msg) {
   console.log(`${GREEN}✓${RESET} ${msg}`);
@@ -248,7 +249,88 @@ function runCodex(codexExe, args) {
   return run(codexExe, args, { cwd: REPO_ROOT });
 }
 
-function installCodex() {
+function writeJsonAtomic(filePath, value) {
+  const tmp = `${filePath}.tmp.${process.pid}`;
+  fs.writeFileSync(tmp, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+  fs.renameSync(tmp, filePath);
+}
+
+function installCodexForceUltra() {
+  const codexDir = process.env.CODEX_HOME || path.join(os.homedir(), ".codex");
+  const hooksDir = path.join(codexDir, "hooks");
+  const hooksPath = path.join(codexDir, "hooks.json");
+  const hookSrc = path.join(
+    REPO_ROOT,
+    "plugins",
+    "pordee-codex",
+    "hooks",
+    CODEX_FORCE_ULTRA_HOOK
+  );
+  const hookDest = path.join(hooksDir, CODEX_FORCE_ULTRA_HOOK);
+
+  try {
+    fs.mkdirSync(hooksDir, { recursive: true });
+    fs.copyFileSync(hookSrc, hookDest);
+    ok(`Codex force-ultra hook copied -> ${hookDest}`);
+  } catch (error) {
+    fail(`Could not copy Codex force-ultra hook: ${error.message}`);
+    return false;
+  }
+
+  const newHook = {
+    type: "command",
+    command: `node "${hookDest}"`,
+    commandWindows: `"${process.execPath}" "${hookDest}"`,
+    timeout: 5,
+    statusMessage: "Enforcing Pordee ultra mode"
+  };
+
+  let settings = {};
+  try {
+    if (fs.existsSync(hooksPath)) {
+      settings = JSON.parse(fs.readFileSync(hooksPath, "utf8"));
+    }
+  } catch (error) {
+    warn(`Could not read Codex hooks.json (${error.message}) - will create fresh`);
+    settings = {};
+  }
+
+  if (!settings.hooks) settings.hooks = {};
+  if (!settings.hooks.UserPromptSubmit) settings.hooks.UserPromptSubmit = [];
+
+  settings.hooks.UserPromptSubmit = settings.hooks.UserPromptSubmit
+    .map((group) => {
+      if (!Array.isArray(group?.hooks)) return group;
+
+      const hooks = group.hooks.filter((hook) => {
+        const command = String(hook?.command || "");
+        const commandWindows = String(hook?.commandWindows || "");
+        return !(
+          command.includes("pordee-force-ultra.js") ||
+          commandWindows.includes("pordee-force-ultra.js") ||
+          command.includes("pordee-full.js") ||
+          commandWindows.includes("pordee-full.js")
+        );
+      });
+
+      return { ...group, hooks };
+    })
+    .filter((group) => !Array.isArray(group?.hooks) || group.hooks.length > 0);
+
+  settings.hooks.UserPromptSubmit.unshift({ hooks: [newHook] });
+
+  try {
+    writeJsonAtomic(hooksPath, settings);
+    ok(`Codex hooks updated -> ${hooksPath}`);
+  } catch (error) {
+    fail(`Could not update Codex hooks.json: ${error.message}`);
+    return false;
+  }
+
+  return true;
+}
+
+function installCodex(options = {}) {
   const codexExe = findCodexExecutable();
   if (!codexExe) {
     fail("Could not find a working Codex CLI");
@@ -339,6 +421,18 @@ Start a ${BOLD}new Codex thread${RESET} so the new skill and hook are picked up.
 This repo is now registered as marketplace ${BOLD}${CODEX_MARKETPLACE_NAME}${RESET}.
 `);
 
+  if (options.forceUltra) {
+    if (!installCodexForceUltra()) {
+      return false;
+    }
+
+    console.log(`
+${GREEN}${BOLD}Codex ultra mode forced globally.${RESET}
+
+Every new chat and turn now gets the shortest mode automatically.
+`);
+  }
+
   return true;
 }
 
@@ -347,6 +441,7 @@ function printUsage() {
   info("  node install.js          # Claude only (backward compatible)");
   info("  node install.js claude   # Claude only");
   info("  node install.js codex    # Codex plugin only");
+  info("  node install.js codex --force-ultra   # Codex plugin + global ultra mode");
   info("  node install.js both     # Claude + Codex");
 }
 
@@ -355,7 +450,9 @@ function main() {
     process.exit(1);
   }
 
-  const mode = (process.argv[2] || "claude").toLowerCase();
+  const args = process.argv.slice(2);
+  const mode = (args.find((arg) => !arg.startsWith("--")) || "claude").toLowerCase();
+  const forceUltra = args.includes("--force-ultra");
   const validModes = new Set(["claude", "codex", "both"]);
 
   console.log(`\n${BOLD}pordee-pen-caveman installer${RESET}\n`);
@@ -373,7 +470,7 @@ function main() {
   }
 
   if (mode === "codex" || mode === "both") {
-    success = installCodex() && success;
+    success = installCodex({ forceUltra }) && success;
   }
 
   if (!success) {

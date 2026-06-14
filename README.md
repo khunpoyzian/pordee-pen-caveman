@@ -91,6 +91,12 @@ restart Claude Code 1 ครั้ง พร้อมใช้
 node install.js codex
 ```
 
+บังคับ Codex ให้ใช้โหมดสั้นสุดทุกแชทใหม่ทุก turn:
+
+```bash
+node install.js codex --force-ultra
+```
+
 ถ้าต้องการติดตั้งทั้ง Claude และ Codex พร้อมกัน:
 
 ```bash
@@ -105,6 +111,8 @@ codex plugin add pordee-codex@pordee-codex
 ```
 
 จากนั้นเริ่ม thread ใหม่ 1 ครั้งเพื่อให้ Codex โหลด skill และ hook ชุดใหม่
+
+ถ้าจะเอาแบบ force ultra global ให้ใช้ installer จาก repo เพราะคำสั่ง `codex plugin add` อย่างเดียวจะติดตั้งเฉพาะ plugin ไม่ได้เขียน `~/.codex/hooks.json`
 
 รายละเอียดฝั่ง Codex ดูใน `plugins/pordee-codex/README.md`
 
