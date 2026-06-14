@@ -1,0 +1,27 @@
+{
+  "name": "pordee-codex",
+  "version": "0.2.1",
+  "description": "Automatic concise Thai and English responses for Codex with selectable levels.",
+  "author": {
+    "name": "khunpoyzian",
+    "url": "https://github.com/khunpoyzian"
+  },
+  "homepage": "https://github.com/khunpoyzian/pordee-pen-caveman/tree/main/plugins/pordee-codex",
+  "repository": "https://github.com/khunpoyzian/pordee-pen-caveman",
+  "license": "MIT",
+  "keywords": ["thai", "concise", "tokens", "pordee", "codex"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Pordee for Codex",
+    "shortDescription": "Concise Thai and English with selectable levels.",
+    "longDescription": "Detects Thai or English automatically and supports lite, full, ultra, and per-turn stop controls while preserving technical accuracy.",
+    "developerName": "khunpoyzian",
+    "category": "Productivity",
+    "capabilities": ["UserPromptSubmit"],
+    "defaultPrompt": [
+      "พอดี",
+      "ตอบไทยแบบสั้นแต่ครบ",
+      "Use concise English for this task"
+    ]
+  }
+}

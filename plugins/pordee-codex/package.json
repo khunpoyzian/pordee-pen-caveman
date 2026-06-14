@@ -1,0 +1,13 @@
+{
+  "name": "pordee-codex",
+  "version": "0.2.1",
+  "private": true,
+  "description": "Automatic concise Thai and English mode for Codex.",
+  "scripts": {
+    "test": "node scripts/test-hook.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${PLUGIN_ROOT}/hooks/pordee-auto.js\"",
+            "commandWindows": "node \"${PLUGIN_ROOT}\\hooks\\pordee-auto.js\"",
+            "timeout": 5,
+            "statusMessage": "Selecting concise language mode"
+          }
+        ]
+      }
+    ]
+  }
+}

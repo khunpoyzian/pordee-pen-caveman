@@ -8,6 +8,8 @@
 
 Plugin สำหรับ Claude Code ที่รวม [**caveman**](https://github.com/JuliusBrussee/caveman) (โหมดตอบ English สั้น) กับ [**pordee**](https://github.com/kerlos/pordee) (โหมดตอบไทยสั้น) ไว้ในตัวเดียว แล้วเพิ่ม `lang-auto-switch` hook ที่ตรวจภาษาของ prompt อัตโนมัติ แล้วเลือกโหมดให้เอง
 
+Repo นี้ยังรวม Codex plugin สำหรับใช้งานกับ Codex desktop/CLI ไว้ที่ `plugins/pordee-codex/` ด้วย
+
 ---
 
 ## ทำไมต้อง pordee-pen-caveman
@@ -80,6 +82,19 @@ Installer จะ:
 - ถ้ามี `caveman` ติดตั้งอยู่ จะตั้ง `defaultMode` เป็น `off` ให้ hook นี้คุมโหมดต่อ turn เอง
 
 restart Claude Code 1 ครั้ง พร้อมใช้
+
+## ใช้กับ Codex
+
+Repo เดียวกันนี้มี Codex plugin แยกไว้ที่ `plugins/pordee-codex/`
+
+```bash
+codex plugin marketplace add khunpoyzian/pordee-pen-caveman
+codex plugin add pordee-codex@pordee-codex
+```
+
+จากนั้นเปิด thread ใหม่ แล้วใช้ `/hooks` เพื่อ review และ trust hook ครั้งแรก
+
+รายละเอียดของฝั่ง Codex ดูใน `plugins/pordee-codex/README.md`
 
 ### ทดสอบหลังติดตั้ง
 

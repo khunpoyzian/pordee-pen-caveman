@@ -1,0 +1,8 @@
+pordee-codex is adapted from:
+
+- pordee by Vatunyoo Suwannapisit
+- pordee-pen-caveman: https://github.com/khunpoyzian/pordee-pen-caveman
+- caveman by Julius Brussee: https://github.com/JuliusBrussee/caveman
+
+The adaptation replaces Claude Code installation and state handling with
+Codex plugin packaging and Codex UserPromptSubmit lifecycle hooks.

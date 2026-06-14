@@ -1,0 +1,20 @@
+{
+  "name": "pordee-codex",
+  "interface": {
+    "displayName": "Pordee Codex"
+  },
+  "plugins": [
+    {
+      "name": "pordee-codex",
+      "source": {
+        "source": "local",
+        "path": "./plugins/pordee-codex"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
