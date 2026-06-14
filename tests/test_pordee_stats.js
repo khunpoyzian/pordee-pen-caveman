@@ -54,7 +54,7 @@ test('reads --session-file directly and sums output tokens', (tmp) => {
     encoding: 'utf8',
     env: { ...process.env, CLAUDE_CONFIG_DIR: path.join(tmp, '.claude'), PORDEE_HOME: path.join(tmp, '.pordee') },
   });
-  assert.match(out, /Turns:\s+2/);
+  assert.match(out, /เทิร์น:\s+2/);
   assert.match(out, /Output tokens:\s+150/);
   assert.match(out, /Cache-read tokens:\s+250/);
 });
@@ -71,8 +71,8 @@ test('shows savings estimate when compression.json has data for level', (tmp) =>
     encoding: 'utf8',
     env: { ...process.env, CLAUDE_CONFIG_DIR: path.join(tmp, '.claude'), PORDEE_HOME: path.join(tmp, '.pordee'), PORDEE_BENCHMARK_DIR: path.join(tmp, 'benchmarks') },
   });
-  assert.match(out, /Est\. without pordee:/);
-  assert.match(out, /Est\. tokens saved:/);
+  assert.match(out, /โทเค็นโดยประมาณ \(ไม่ใช้พอดี\):/);
+  assert.match(out, /ประหยัดโทเค็น:/);
   assert.match(out, /~58%/);
 });
 
@@ -87,7 +87,7 @@ test('shows no-benchmark message when compression.json missing', (tmp) => {
     encoding: 'utf8',
     env: { ...process.env, CLAUDE_CONFIG_DIR: path.join(tmp, '.claude'), PORDEE_HOME: path.join(tmp, '.pordee'), PORDEE_BENCHMARK_DIR: path.join(tmp, 'benchmarks') },
   });
-  assert.match(out, /No benchmark data for 'full' level/);
+  assert.match(out, /ไม่มี benchmark สำหรับ level 'full'/);
 });
 
 test('reports no-session when no .jsonl exists', (tmp) => {
@@ -115,8 +115,8 @@ test('shows USD savings when model is a known sonnet variant', (tmp) => {
     encoding: 'utf8',
     env: { ...process.env, CLAUDE_CONFIG_DIR: path.join(tmp, '.claude'), PORDEE_HOME: path.join(tmp, '.pordee'), PORDEE_BENCHMARK_DIR: path.join(tmp, 'benchmarks') },
   });
-  assert.match(out, /Est\. saved \(USD\):/);
-  assert.match(out, /Pricing for claude-sonnet-4-20250514/);
+  assert.match(out, /ประหยัด \(USD\):/);
+  assert.match(out, /ราคาสำหรับ claude-sonnet-4-20250514/);
 });
 
 test('omits USD line when model is unknown', (tmp) => {
@@ -131,14 +131,14 @@ test('omits USD line when model is unknown', (tmp) => {
     encoding: 'utf8',
     env: { ...process.env, CLAUDE_CONFIG_DIR: path.join(tmp, '.claude'), PORDEE_HOME: path.join(tmp, '.pordee'), PORDEE_BENCHMARK_DIR: path.join(tmp, 'benchmarks') },
   });
-  assert.match(out, /Est\. tokens saved:/);
-  assert.doesNotMatch(out, /Est\. saved \(USD\)/);
+  assert.match(out, /ประหยัดโทเค็น:/);
+  assert.doesNotMatch(out, /ประหยัด \(USD\)/);
 });
 
 test('formatStats handles empty session gracefully', () => {
   const { formatStats } = require(STATS);
   const out = formatStats({ outputTokens: 0, cacheReadTokens: 0, turns: 0, level: 'full', model: null });
-  assert.match(out, /No conversation yet/);
+  assert.match(out, /ยังไม่มีบทสนทนา/);
 });
 
 test('--share prints single-line summary', (tmp) => {
@@ -154,7 +154,7 @@ test('--share prints single-line summary', (tmp) => {
     env: { ...process.env, CLAUDE_CONFIG_DIR: path.join(tmp, '.claude'), PORDEE_HOME: path.join(tmp, '.pordee'), PORDEE_BENCHMARK_DIR: path.join(tmp, 'benchmarks') },
   });
   assert.strictEqual(out.split('\n').filter(Boolean).length, 1);
-  assert.match(out, /^⚡ Saved \d+ output tokens/);
+  assert.match(out, /^⚡ ประหยัด \d+ output tokens/);
 });
 
 test('--share works with no benchmark data', (tmp) => {
@@ -168,7 +168,7 @@ test('--share works with no benchmark data', (tmp) => {
     encoding: 'utf8',
     env: { ...process.env, CLAUDE_CONFIG_DIR: path.join(tmp, '.claude'), PORDEE_HOME: path.join(tmp, '.pordee'), PORDEE_BENCHMARK_DIR: path.join(tmp, 'no-benchmarks') },
   });
-  assert.match(out, /^⚡ \d+ turns, \d+ output tokens this session — pordee/);
+  assert.match(out, /^⚡ \d+ เทิร์น, \d+ output tokens ใน session นี้ — pordee/);
 });
 
 test('appends to lifetime history on each run', (tmp) => {
@@ -208,7 +208,7 @@ test('--all aggregates latest entry per session', (tmp) => {
     env: { ...process.env, PORDEE_HOME: path.join(tmp, '.pordee') },
   });
   assert.match(out, /Sessions:\s+2/);
-  assert.match(out, /Est\. tokens saved:\s+556/);
+  assert.match(out, /ประหยัดโทเค็น:\s+556/);
   assert.match(out, /\$0\.0084/);
 });
 
@@ -228,7 +228,7 @@ test('--since filters by time window', (tmp) => {
     env: { ...process.env, PORDEE_HOME: path.join(tmp, '.pordee') },
   });
   assert.match(out, /Sessions:\s+1/);
-  assert.match(out, /Est\. tokens saved:\s+92/);
+  assert.match(out, /ประหยัดโทเค็น:\s+92/);
   assert.match(out, /\(last 1d\)/);
 });
 
@@ -251,7 +251,7 @@ test('--all reports empty when no history', (tmp) => {
     encoding: 'utf8',
     env: { ...process.env, PORDEE_HOME: path.join(tmp, '.pordee') },
   });
-  assert.match(out, /No sessions logged yet/);
+  assert.match(out, /ยังไม่มี session/);
 });
 
 test('writes statusline suffix file after a stats run', (tmp) => {

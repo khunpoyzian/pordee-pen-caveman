@@ -85,16 +85,28 @@ restart Claude Code 1 ครั้ง พร้อมใช้
 
 ## ใช้กับ Codex
 
-Repo เดียวกันนี้มี Codex plugin แยกไว้ที่ `plugins/pordee-codex/`
+จาก clone ของ repo นี้:
+
+```bash
+node install.js codex
+```
+
+ถ้าต้องการติดตั้งทั้ง Claude และ Codex พร้อมกัน:
+
+```bash
+node install.js both
+```
+
+หรือจะติดตั้งตรงจาก GitHub marketplace ก็ได้:
 
 ```bash
 codex plugin marketplace add khunpoyzian/pordee-pen-caveman
 codex plugin add pordee-codex@pordee-codex
 ```
 
-จากนั้นเปิด thread ใหม่ แล้วใช้ `/hooks` เพื่อ review และ trust hook ครั้งแรก
+จากนั้นเริ่ม thread ใหม่ 1 ครั้งเพื่อให้ Codex โหลด skill และ hook ชุดใหม่
 
-รายละเอียดของฝั่ง Codex ดูใน `plugins/pordee-codex/README.md`
+รายละเอียดฝั่ง Codex ดูใน `plugins/pordee-codex/README.md`
 
 ### ทดสอบหลังติดตั้ง
 
